@@ -18,6 +18,14 @@ let MyToolkit = (function() {
             add.stop(1, '#444444');
         });
 
+        const buttonState = {
+            "IDLE_UP": 1,
+            "IDLE_HOVER": 2,
+            "PRESSED_DOWN": 3,
+            "EXECUTE": 4
+        }
+        var currentState = buttonState.IDLE_UP;
+
         // Construct button
         let button = draw.group();
 
@@ -38,8 +46,13 @@ let MyToolkit = (function() {
             .fill('#111111')
             .radius(10)
             .dy(buttonZ);
-
         rectSide.insertBefore(rectTop);
+
+        // Mask entire button so event handlers triggered on entire button rather than parts of button
+        let buttonMask = button.rect(buttonWidthDefault, buttonHeightDefault + buttonZ)
+            .radius(10)
+            .opacity(0);
+        buttonMask.front();
 
         // Button event handling
         let idleUpEventHandler = null;
@@ -49,35 +62,42 @@ let MyToolkit = (function() {
         let clickEventHandler = null;
 
         button.mouseover((event) => {
-            rectTop.fill({ color: gradientDark});
-            button.css('cursor', 'pointer');
-            if(idleHoverEventHandler != null) {
-                idleHoverEventHandler(event);
-            }
+            if (currentState != buttonState.IDLE_HOVER) {
+                currentState = buttonState.IDLE_HOVER;
+                rectTop.fill({ color: gradientDark});
+                button.css('cursor', 'pointer');
+                if(idleHoverEventHandler != null) {
+                    idleHoverEventHandler(event);
+                }
+            }          
         });
         button.mouseout((event) => {
-            rectTop.fill({ color: gradient});
-            if(idleUpEventHandler != null) {
-                idleUpEventHandler(event);
+            if (currentState != buttonState.IDLE_UP) {
+                currentState = buttonState.IDLE_UP;
+                rectTop.fill({ color: gradient});
+                if(idleUpEventHandler != null) {
+                    idleUpEventHandler(event);
+                }
             }
         });
         button.mousedown((event) => {
-            rectSide.css('visibility', 'hidden');
-            rectTopGroup.dy(buttonZ);
-            if (pressedDownEventHandler != null) {
-                pressedDownEventHandler(event);
+            if (currentState != buttonState.PRESSED_DOWN) {
+                currentState = buttonState.PRESSED_DOWN;
+                rectSide.css('visibility', 'hidden');
+                rectTopGroup.dy(buttonZ);
+                if (pressedDownEventHandler != null) {
+                    pressedDownEventHandler(event);
+                }
             }
         });
-        button.mouseup((event) => {
-            if (idleUpEventHandler != null) {
-                idleUpEventHandler(event);
-            }
+        button.mouseup(() => {
             rectSide.css('visibility', 'visible');
             rectTopGroup.dy(buttonZ * -1);
         });
         button.click(event => {
             if(clickEventHandler != null) {
                 clickEventHandler(event);
+                currentState == buttonState.EXECUTE;
                 if (executeEventHandler != null) {
                     executeEventHandler(event);
                 }
@@ -125,9 +145,11 @@ let MyToolkit = (function() {
                 if (buttonText.length() > (buttonWidthDefault - buttonLeftPadding - buttonRightPadding)) {
                     rectTop.width(buttonText.length() + buttonLeftPadding + buttonRightPadding);
                     rectSide.width(buttonText.length() + buttonLeftPadding + buttonRightPadding);
+                    buttonMask.width(buttonText.length() + buttonLeftPadding + buttonRightPadding);
                 } else {
                     rectTop.width(buttonWidthDefault);
                     rectSide.width(buttonWidthDefault);
+                    buttonMask.width(buttonWidthDefault);
                 }
 
                 centerButtonText(rectTop.x(), rectTop.y());
