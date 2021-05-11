@@ -72,6 +72,9 @@ let MyToolkit = (function() {
             }          
         });
         button.mouseout((event) => {
+            if (currentState == buttonState.PRESSED_DOWN) {
+                button.fire('mouseup');
+            }
             if (currentState != buttonState.IDLE_UP) {
                 currentState = buttonState.IDLE_UP;
                 rectTop.fill({ color: gradient});
@@ -91,8 +94,10 @@ let MyToolkit = (function() {
             }
         });
         button.mouseup(() => {
-            rectSide.css('visibility', 'visible');
-            rectTopGroup.dy(buttonZ * -1);
+            if (currentState == buttonState.PRESSED_DOWN) {
+                rectSide.css('visibility', 'visible');
+                rectTopGroup.dy(buttonZ * -1);
+            }
         });
         button.click(event => {
             if(clickEventHandler != null) {
@@ -101,6 +106,7 @@ let MyToolkit = (function() {
                 if (executeEventHandler != null) {
                     executeEventHandler(event);
                 }
+                button.fire('mouseover');
             }
         });
 
