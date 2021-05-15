@@ -67,3 +67,22 @@ radioBtns.onSelect((e, idx) => {
 radioBtns.onDeselect((e, idx) => {
 	console.log("DESELECT: Button " + idx, e)
 });
+
+// Implement a MyToolkit Textbox
+var textbox = new MyToolkit.TextBox();
+textbox.move(350, 100);
+textbox.onIdle(e => {
+	console.log("IDLE: ", e)
+});
+textbox.onIdleHover(e => {
+	console.log("IDLE HOVER: ", e)
+});
+textbox.onFocus(e => {
+	console.log("FOCUS: ", e)
+});
+textbox.onPrint(e => {
+	console.log("PRINT: ", e)
+});
+textbox.onTextChange(e => {
+	console.log("TEXT CHANGE: ", textbox.getText());
+})

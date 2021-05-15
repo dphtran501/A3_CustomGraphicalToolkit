@@ -107,7 +107,7 @@ let MyToolkit = (function() {
         button.click(event => {
             if(clickEventHandler != null) {
                 clickEventHandler(event);
-                currentState == buttonState.EXECUTE;
+                currentState = buttonState.EXECUTE;
                 if (executeEventHandler != null) {
                     executeEventHandler(event);
                 }
@@ -268,7 +268,7 @@ let MyToolkit = (function() {
             } else if (!isChecked && uncheckEventHandler != null) {
                 uncheckEventHandler(event);
             }
-            currentState == checkboxState.EXECUTE;
+            currentState = checkboxState.EXECUTE;
             if (executeEventHandler != null) {
                 executeEventHandler(event);
             }
@@ -510,8 +510,178 @@ let MyToolkit = (function() {
             }
         }
     }
+
+    let TextBox = function() {
+        let textboxWidth = 200;
+        let textboxHeight = 30;
+        let textboxCornerRadius = 4;
+        let textPadding = 10;
+
+        const textboxState = {
+            "IDLE": 1,
+            "IDLE_HOVER": 2,
+            "FOCUS": 3,
+            "PRINT": 4
+        }
+        var currentState = textboxState.IDLE;
+
+        // Construct textbox
+        let textbox = draw.group();
+
+        let box = textbox.rect(textboxWidth, textboxHeight)
+            .stroke({color: '#444444', width: 2})
+            .fill('none')
+            .radius(textboxCornerRadius);
+
+        let textboxText = textbox.text("")
+            .font({
+                size: defaultFontSize,
+                weight: defaultFontWeight,
+                family: defaultFontFamily,
+            })
+        textboxText.move(textPadding, (textboxHeight - defaultFontSize / 2));   // Vertically center with textbox
+
+        let caret = textbox.rect(2, defaultFontSize)
+            .opacity(0);
+        caret.animate().opacity(1).loop(1000, true, 0);
+        caret.timeline().stop();
+        caret.move(textPadding, (textboxHeight - defaultFontSize) / 2); // Vertically center with textbox
+
+        // Mask entire textbox so event handlers triggered on entire box rather than parts of box
+        let boxMask = textbox.rect(textboxWidth, textboxHeight)
+            .radius(textboxCornerRadius)
+            .opacity(0);
+        boxMask.front();
+
+        // Checkbox event handling
+        let idleEventHandler = null;
+        let idleHoverEventHandler = null;
+        let focusEventHandler = null;
+        let printEventHandler = null;
+        let textChangeEventHandler = null;
+
+        boxMask.mouseover((event) => {
+            if (currentState != textboxState.IDLE_HOVER && currentState != textboxState.FOCUS) {
+                currentState = textboxState.IDLE_HOVER;
+                box.stroke({width: 4});
+                textbox.css('cursor', 'pointer');
+                if(idleHoverEventHandler != null) {
+                    idleHoverEventHandler(event);
+                }
+            }
+        });
+        boxMask.mouseout((event) => {
+            // if (currentState == checkboxState.PRESSED_DOWN) {
+            //     boxMask.fire('mouseup');
+            // }
+            if (currentState != textboxState.IDLE && currentState != textboxState.FOCUS) {
+                currentState = textboxState.IDLE;
+                box.stroke({width: 2});
+                if(idleEventHandler != null) {
+                    idleEventHandler(event);
+                }
+            }
+        });
+        boxMask.click(event => {
+            if (currentState != textboxState.FOCUS) {
+                currentState = textboxState.FOCUS;
+                box.stroke({width: 4});
+                textbox.css('cursor', 'text')
+                caret.timeline().play();
+                SVG.on(window, 'keyup', onTextboxKeyUp);
+                SVG.on(window, 'keypress', onTextboxKeyPress);
+                SVG.on(window, 'keydown', onTextboxKeyDown);
+                if (focusEventHandler != null) {
+                    focusEventHandler(event);
+                }
+            }
+        });
+
+        SVG.on(window, 'click', event => {
+            if (currentState == textboxState.FOCUS && event.target != boxMask.node) {
+                box.stroke({width: 2});
+                caret.timeline().stop();
+                currentState = textboxState.IDLE;
+                SVG.off(window, 'keyup', onTextboxKeyUp);
+                SVG.off(window, 'keypress', onTextboxKeyPress);
+                SVG.off(window, 'keydown', onTextboxKeyDown);
+                if (idleEventHandler != null) {
+                    idleEventHandler(event);
+                }
+            }
+        })
+
+        function onTextboxKeyDown(event) {
+            if (currentState == textboxState.FOCUS || currentState == textboxState.PRINT) {
+                currentState = textboxState.PRINT;
+                caret.timeline().stop();
+                if (printEventHandler != null) {
+                    printEventHandler(event);
+                }
+                if (event.key == "Backspace") {
+                    let text = textboxText.text();
+                    let subtext = text.substring(0, text.length - 1);
+                    textboxText.plain(subtext);
+                    if (textChangeEventHandler != null) {
+                        textChangeEventHandler(event);
+                    }
+                }
+            }
+        }
+
+        function onTextboxKeyPress(event) {
+            if (event.key != "Enter") {
+                textboxText.plain(textboxText.text() + event.key);
+                if (textChangeEventHandler != null) {
+                    textChangeEventHandler(event);
+                }
+            }
+        }
+
+        function onTextboxKeyUp(event) {
+            if (currentState == textboxState.PRINT) {
+                currentState = textboxState.FOCUS;
+                // Use textbox.x() + textPadding instead of textboxText.x() since textboxText.x() = 0 when there's no text (e.g. delete all text)
+                caret.x(textbox.x() + textPadding + textboxText.length());
+                caret.timeline().play();
+                if (focusEventHandler != null) {
+                    focusEventHandler(event);
+                }
+            }
+        }
+
+        return {
+            move: function(x, y) {
+                textbox.move(x, y);
+            },
+
+            onIdle: function(eventHandler) {
+                idleEventHandler = eventHandler;
+            },
+
+            onIdleHover: function(eventHandler) {
+                idleHoverEventHandler = eventHandler;
+            },
+
+            onFocus: function(eventHandler) {
+                focusEventHandler = eventHandler;
+            },
+
+            onPrint: function(eventHandler) {
+                printEventHandler = eventHandler;
+            },
+
+            onTextChange: function(eventHandler) {
+                textChangeEventHandler = eventHandler;
+            },
+
+            getText: function() {
+                return textboxText.text();
+            }
+        }
+    }
     
-    return {Button, CheckBox, RadioButton}
+    return {Button, CheckBox, RadioButton, TextBox}
 
 }());
 
