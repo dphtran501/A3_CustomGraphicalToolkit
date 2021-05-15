@@ -42,3 +42,28 @@ chkbox.onCheck(e => {
 chkbox.onUncheck(e => {
 	console.log("UNCHECK: ", e)
 });
+
+// Implement a MyToolkit RadioButton
+var radioBtns = new MyToolkit.RadioButton(5);
+for (let i = 0; i < 5; i++) {
+	radioBtns.setText(i, "This is radio button " + i + ".");
+}
+radioBtns.move(100, 250);
+radioBtns.onIdle(e => {
+	console.log("IDLE: ", e)
+});
+radioBtns.onIdleHover(e => {
+	console.log("IDLE HOVER: ", e)
+});
+radioBtns.onPressedDown(e => {
+	console.log("PRESSED DOWN: ", e)
+});
+radioBtns.onExecute(e => {
+	console.log("EXECUTE: ", e)
+});
+radioBtns.onSelect((e, idx) => {
+	console.log("SELECT: Button " + idx, e)
+});
+radioBtns.onDeselect((e, idx) => {
+	console.log("DESELECT: Button " + idx, e)
+});

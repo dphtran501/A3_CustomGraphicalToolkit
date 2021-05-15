@@ -318,8 +318,200 @@ let MyToolkit = (function() {
             }
         }
     }
+
+    let RadioButton = function(numberOfButtons) {
+        if (numberOfButtons < 2) {
+            throw new Error('Must have at least 2 radio buttons!');
+        }
+        
+        let buttonDiameter = 20;
+        let textIndent = 40;
+        let radioButtonMargin = 10;
+
+        let gradient = draw.gradient('radial', add => {
+            add.stop(0, '#ffffff');
+            add.stop(1, '#666666');
+        });
+
+        const radioButtonState = {
+            "IDLE": 1,
+            "IDLE_HOVER": 2,
+            "PRESSED_DOWN": 3,
+            "EXECUTE": 4
+        }
+
+        // Radio button event handling
+        let idleEventHandler = null;
+        let idleHoverEventHandler = null;
+        let pressedDownEventHandler = null;
+        let executeEventHandler = null;
+        let selectEventHandler = null;
+        let deselectEventHandler = null;
+
+        let idxSelectedButton = -1; // Index of selected radio button; -1 = none selected
+
+        // Construct radio buttons
+        let radioButtons = draw.group();
+        
+        let yShift = 0; // Increments for each button to produce spacing between radioButtons
+        for (let i = 0; i < numberOfButtons; i++) {
+            let radioButton = radioButtons.group();
+            let buttonGroup = radioButton.group();
+            let button = buttonGroup.circle(buttonDiameter) // index 0 of buttonGroup
+                .stroke({color: '#444444', width: 2})
+                .fill({color: '#C5E8B7', opacity: 0});
+
+            let buttonFilled = buttonGroup.circle(buttonDiameter)   // index 1 of buttonGroup
+                .fill(gradient)
+                .center(button.cx(), button.cy())
+                .opacity(0);
+
+            let radioButtonText = radioButton.text("Item")
+                .font({
+                    size: defaultFontSize,
+                    weight: defaultFontWeight,
+                    family: defaultFontFamily,
+                })
+            radioButtonText.move(textIndent, (buttonDiameter - radioButtonText.font('size')) / 2);    // Vertically center with button
+
+            // Mask entire radiobutton (excluding text) so event handlers triggered on entire button rather than parts of button
+            let radioButtonMask = buttonGroup.circle(buttonDiameter)    // index 2 of buttonGroup
+                .opacity(0);
+            radioButtonMask.front();
+
+            // Default states
+            radioButton.data({
+                currentState: radioButtonState.IDLE,
+                isSelected: false
+            });
+
+            radioButtonMask.mouseover((event) => {
+                if (radioButton.data('currentState') != radioButtonState.IDLE_HOVER) {
+                    radioButton.data('currentState', radioButtonState.IDLE_HOVER)
+                    button.stroke({width: 4});
+                    buttonGroup.css('cursor', 'pointer');
+                    if(idleHoverEventHandler != null) {
+                        idleHoverEventHandler(event);
+                    }
+                }
+            });
+            radioButtonMask.mouseout((event) => {
+                if (radioButton.data('currentState') == radioButtonState.PRESSED_DOWN) {
+                    radioButtonMask.fire('mouseup');
+                }
+                if (radioButton.data('currentState') != radioButtonState.IDLE) {
+                    radioButton.data('currentState', radioButtonState.IDLE)
+                    button.stroke({width: 2});
+                    if(idleEventHandler != null) {
+                        idleEventHandler(event);
+                    }
+                }
+            });
+            radioButtonMask.mousedown((event) => {
+                if (radioButton.data('currentState') != radioButtonState.PRESSED_DOWN) {
+                    radioButton.data('currentState', radioButtonState.PRESSED_DOWN)
+                    button.fill({color: '#C5E8B7', opacity: 0.5});
+                    if (pressedDownEventHandler != null) {
+                        pressedDownEventHandler(event);
+                    }
+                }
+            });
+            radioButtonMask.mouseup(() => {
+                if (radioButton.data('currentState') == radioButtonState.PRESSED_DOWN) {
+                    button.fill({color: '#C5E8B7', opacity: 0});
+                }
+            });
+            radioButtonMask.click(event => {
+                selectButton(radioButton);
+                radioButton.data('currentState', radioButtonState.EXECUTE);
+                if (executeEventHandler != null) {
+                    executeEventHandler(event);
+                }
+                radioButtonMask.fire('mouseover');
+            });
+            radioButton.on('select', event => {
+                if (selectEventHandler != null) {
+                    selectEventHandler(event, event.detail.index);
+                }
+            })
+            radioButton.on('deselect', event => {
+                if (deselectEventHandler != null) {
+                    deselectEventHandler(event, event.detail.index);
+                }
+            })
+
+            radioButton.y(yShift);
+            yShift += buttonDiameter + radioButtonMargin;
+        }
+
+        function selectButton(radioButton) {
+            let buttonGroup = radioButton.get(0);
+            let buttonFilled = buttonGroup.get(1);
+
+            let updatedIsSelected = !(radioButton.data('isSelected'));
+            radioButton.data('isSelected', updatedIsSelected);
+            if (updatedIsSelected) {
+                buttonFilled.opacity(1);
+                // De-select previous selected radio button
+                if (idxSelectedButton >= 0) {
+                    let previousSelectedButton = radioButtons.get(idxSelectedButton);
+                    previousSelectedButton.data('isSelected', false);
+                    let previousSelectedButtonFilled = previousSelectedButton.get(0).get(1);
+                    previousSelectedButtonFilled.opacity(0);
+                }
+
+                idxSelectedButton = radioButtons.index(radioButton);
+                radioButton.fire('select', {index: radioButtons.index(radioButton)});
+            } else {
+                buttonFilled.opacity(0);
+                idxSelectedButton = -1;
+                radioButton.fire('deselect', {index: radioButtons.index(radioButton)});
+            }
+        }
+
+        return {
+            move: function(x, y) {
+                radioButtons.move(x, y);
+            },
+
+            onIdle: function(eventHandler) {
+                idleEventHandler = eventHandler;
+            },
+
+            onIdleHover: function(eventHandler) {
+                idleHoverEventHandler = eventHandler;
+            },
+
+            onPressedDown: function(eventHandler) {
+                pressedDownEventHandler = eventHandler;
+            },
+
+            onExecute: function(eventHandler) {
+                executeEventHandler = eventHandler;
+            },
+
+            onSelect: function(eventHandler) {
+                selectEventHandler = eventHandler;
+            },
+
+            onDeselect: function(eventHandler) {
+                deselectEventHandler = eventHandler;
+            },
+
+            setText: function(index, text) {
+                if (index < 0 || index >= numberOfButtons) {
+                    throw new RangeError("Index must be between 0 and " + (numberOfButtons - 1));
+                }
+
+                let radioButton = radioButtons.get(index);
+                let radioButtonText = radioButton.get(1);
+                radioButtonText.clear();
+                radioButtonText.text(text);
+            }
+        }
+    }
     
-    return {Button, CheckBox}
+    return {Button, CheckBox, RadioButton}
 
 }());
 
