@@ -85,4 +85,24 @@ textbox.onPrint(e => {
 });
 textbox.onTextChange(e => {
 	console.log("TEXT CHANGE: ", textbox.getText());
+});
+
+// Implement a MyToolkit Scrollbar
+var scrollbar = new MyToolkit.ScrollBar();
+scrollbar.setHeight(300);
+scrollbar.move(350, 150);
+scrollbar.onMove((e, direction) => {
+	console.log("MOVING: ", direction)
+})
+scrollbar.onIdle(e => {
+	console.log("IDLE: ", e)
+});
+scrollbar.onIdleHover(e => {
+	console.log("IDLE HOVER: ", e)
+});
+scrollbar.onDragReady(e => {
+	console.log("DRAG READY: ", scrollbar.getThumbPosition());
+});
+scrollbar.onDrag(e => {
+	console.log("DRAG: ", scrollbar.getThumbPosition());
 })

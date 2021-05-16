@@ -5,6 +5,7 @@ let MyToolkit = (function() {
     let defaultFontFamily = 'sans-serif'
 
     let draw = SVG().addTo('body').size('1000px','1000px');
+    let body = draw.parent();
 
     let Button = function(){
 
@@ -571,9 +572,6 @@ let MyToolkit = (function() {
             }
         });
         boxMask.mouseout((event) => {
-            // if (currentState == checkboxState.PRESSED_DOWN) {
-            //     boxMask.fire('mouseup');
-            // }
             if (currentState != textboxState.IDLE && currentState != textboxState.FOCUS) {
                 currentState = textboxState.IDLE;
                 box.stroke({width: 2});
@@ -680,8 +678,171 @@ let MyToolkit = (function() {
             }
         }
     }
+
+    let ScrollBar = function() {
+        let scrollbarWidth = 16;
+        let scrollbarHeight = 200;
+        let thumbHeight = 67;
+        let thumbCornerRadious = 1;
+
+        let gradient = draw.gradient('radial', add => {
+            add.stop(0, '#999999');
+            add.stop(1, '#666666');
+        });
+        let gradientDark = draw.gradient('radial', add => {
+            add.stop(0, '#777777');
+            add.stop(1, '#444444');
+        });
+
+        const scrollbarState = {
+            "IDLE": 1,
+            "IDLE_HOVER": 2,
+            "DRAG_READY": 3,
+            "DRAG": 4
+        }
+        var currentState = scrollbarState.IDLE;
+
+        // Construct textbox
+        let scrollbar = draw.group();
+
+        let bar = scrollbar.rect(scrollbarWidth, scrollbarHeight)
+            .stroke({color: '#444444', width: 1})
+            .fill('none');
+
+        let thumb = scrollbar.rect(scrollbarWidth, thumbHeight)
+            .fill(gradient)
+            .radius(thumbCornerRadious);
+
+        // Checkbox event handling
+        let idleEventHandler = null;
+        let idleHoverEventHandler = null;
+        let dragReadyEventHandler = null;
+        let dragEventHandler = null;
+        let moveEventHandler = null;
+
+        thumb.mouseover(event => {
+            if (currentState != scrollbarState.IDLE_HOVER && (currentState != scrollbarState.DRAG_READY || event.detail.fromMouseUp)) {
+                currentState = scrollbarState.IDLE_HOVER;
+                thumb.fill(gradientDark);
+                scrollbar.css('cursor', 'grab');
+                if(idleHoverEventHandler != null) {
+                    idleHoverEventHandler(event);
+                }
+            }
+        });
+        thumb.mouseout(event => {
+            if (currentState != scrollbarState.IDLE && (currentState != scrollbarState.DRAG_READY || event.detail.fromMouseUp)) {
+                SVG.off(window, 'mouseup', onMouseUpOutsideThumb);  // if mouseout fired from onMouseUpOutsideThumb
+                currentState = scrollbarState.IDLE;
+                thumb.fill(gradient);
+                if(idleEventHandler != null) {
+                    idleEventHandler(event);
+                }
+            }
+        });
+        thumb.mousedown(event => {
+            if (currentState != scrollbarState.DRAG_READY) {
+                currentState = scrollbarState.DRAG_READY;
+                scrollbar.css('cursor', 'grabbing');
+                body.css('cursor', 'grabbing');
+                SVG.on(window, 'mouseup', onMouseUpOutsideThumb);
+                SVG.on(window, 'mousemove', onMouseMove);
+                if (dragReadyEventHandler != null) {
+                    dragReadyEventHandler(event);
+                }
+            }
+        });
+        thumb.mouseup(event => {
+            if (currentState == scrollbarState.DRAG_READY) {
+                SVG.off(window, 'mouseup', onMouseUpOutsideThumb);
+                SVG.off(window, 'mousemove', onMouseMove);
+                body.css('cursor', 'default');
+                thumb.fire('mouseover', {fromMouseUp: true});
+            }
+        });
+
+        function onMouseUpOutsideThumb(event) {
+            if (currentState == scrollbarState.DRAG_READY && event.target != thumb.node) {
+                SVG.off(window, 'mousemove', onMouseMove);
+                body.css('cursor', 'default');
+                thumb.fire('mouseout', {fromMouseUp: true});
+            }
+        }
+
+        function onMouseMove(event) {
+            if (currentState == scrollbarState.DRAG_READY) {
+                currentState = scrollbarState.DRAG;
+                if (dragEventHandler != null) {
+                    dragEventHandler(event);
+                }
+                // Move thumb
+                if (event.movementY < 0 && thumb.y() != bar.y() && thumb.y() + event.movementY < bar.y()) {
+                    thumb.y(bar.y());
+                } else if (event.movementY > 0 && thumb.y() + thumbHeight != bar.y() + scrollbarHeight 
+                    && thumb.y() + thumbHeight + event.movementY > bar.y() + scrollbarHeight) {
+                        thumb.y(bar.y() + scrollbarHeight - thumbHeight);
+                } else {
+                    thumb.dy(event.movementY);
+                }
+                if (moveEventHandler != null) {
+                    moveEventHandler(event, event.movementY < 0 ? "UP" : "DOWN");
+                }
+
+                currentState = scrollbarState.DRAG_READY;
+                if (dragReadyEventHandler != null) {
+                    dragReadyEventHandler(event);
+                }
+            }
+        }
+
+        return {
+            move: function(x, y) {
+                scrollbar.move(x, y);
+            },
+
+            setHeight: function(newHeight) {
+                if (newHeight < thumbHeight) {
+                    throw new Error("Scrollbar must be longer than thumb!")
+                }
+                scrollbarHeight = newHeight;
+                let newBar = scrollbar.rect(scrollbarWidth, scrollbarHeight)
+                    .stroke({color: '#444444', width: 1})
+                    .fill('none');
+                bar.replace(newBar);
+                newBar.move(bar.x(), bar.y());
+                bar = newBar;
+            },
+
+            getThumbPosition: function() {
+                return {
+                    'x': thumb.x(),
+                    'y': thumb.y()
+                };
+            },
+
+            onMove: function(eventHandler) {
+                moveEventHandler = eventHandler
+            },
+
+            onIdle: function(eventHandler) {
+                idleEventHandler = eventHandler;
+            },
+
+            onIdleHover: function(eventHandler) {
+                idleHoverEventHandler = eventHandler;
+            },
+
+            onDragReady: function(eventHandler) {
+                dragReadyEventHandler = eventHandler;
+            },
+
+            onDrag: function(eventHandler) {
+                dragEventHandler = eventHandler;
+            },
+        }
+    }
     
-    return {Button, CheckBox, RadioButton, TextBox}
+    return {Button, CheckBox, RadioButton, TextBox, ScrollBar}
 
 }());
 
