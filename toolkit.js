@@ -181,7 +181,7 @@ let MyToolkit = (function() {
             "PRESSED_DOWN": 3,
             "EXECUTE": 4
         }
-        var currentState = checkboxState.IDLE;
+        let currentState = checkboxState.IDLE;
         
         let isChecked = false;
 
@@ -524,7 +524,7 @@ let MyToolkit = (function() {
             "FOCUS": 3,
             "PRINT": 4
         }
-        var currentState = textboxState.IDLE;
+        let currentState = textboxState.IDLE;
 
         // Construct textbox
         let textbox = draw.group();
@@ -554,7 +554,7 @@ let MyToolkit = (function() {
             .opacity(0);
         boxMask.front();
 
-        // Checkbox event handling
+        // Textbox event handling
         let idleEventHandler = null;
         let idleHoverEventHandler = null;
         let focusEventHandler = null;
@@ -700,9 +700,9 @@ let MyToolkit = (function() {
             "DRAG_READY": 3,
             "DRAG": 4
         }
-        var currentState = scrollbarState.IDLE;
+        let currentState = scrollbarState.IDLE;
 
-        // Construct textbox
+        // Construct progress bar
         let scrollbar = draw.group();
 
         let bar = scrollbar.rect(scrollbarWidth, scrollbarHeight)
@@ -713,7 +713,7 @@ let MyToolkit = (function() {
             .fill(gradient)
             .radius(thumbCornerRadious);
 
-        // Checkbox event handling
+        // Progress bar event handling
         let idleEventHandler = null;
         let idleHoverEventHandler = null;
         let dragReadyEventHandler = null;
@@ -841,8 +841,164 @@ let MyToolkit = (function() {
             },
         }
     }
+
+    let ProgressBar = function() {
+        let progressBarWidth = 200;
+        let progressBarHeight = 16;
+        let progressWidth = 0;
+        let progressCornerRadious = 1;
+
+        let gradient = draw.gradient('linear', add => {
+            add.stop(0, '#666666');
+            add.stop(1, '#999999');
+        });
+
+        const progressBarState = {
+            "IDLE": 1,
+            "IDLE_HOVER": 2,
+            "PROGRESS": 3,
+            "PROGRESS_COMPLETE": 4
+        }
+        let currentState = progressBarState.IDLE;
+
+        // Construct progress bar
+        let progressBar = draw.group();
+
+        let bar = progressBar.rect(progressBarWidth, progressBarHeight)
+            .stroke({color: '#444444', width: 1})
+            .fill('none');
+
+        let progress = progressBar.rect(progressWidth, progressBarHeight)
+            .fill(gradient)
+            .radius(progressCornerRadious);
+
+        // Mask entire progress bar so event handlers triggered on entire bar rather than parts of bar
+        let barMask = progressBar.rect(progressBarWidth, progressBarHeight)
+            .opacity(0);
+        barMask.front();
+
+        // Progress bar event handling
+        let idleEventHandler = null;
+        let idleHoverEventHandler = null;
+        let progressEventHandler = null;
+        let progressCompleteEventHandler = null;
+        let afterProgressEventHandler = null;
+
+        barMask.mouseover(event => {
+            if (currentState != progressBarState.IDLE_HOVER) {
+                currentState = progressBarState.IDLE_HOVER;
+                if (progressWidth != progressBarWidth) {
+                    progressBar.css('cursor', 'progress');
+                } else {
+                    progressBar.css('cursor', 'default');
+                }
+                if(idleHoverEventHandler != null) {
+                    idleHoverEventHandler(event);
+                }
+            }
+        });
+        barMask.mouseout(event => {
+            if (currentState != progressBarState.IDLE) {
+                currentState = progressBarState.IDLE;
+                if(idleEventHandler != null) {
+                    idleEventHandler(event);
+                }
+            }
+        });
+        progressBar.on('increment', event => {
+            if (currentState != progressBarState.PROGRESS) {
+                let previousState = currentState;
+                currentState = progressBarState.PROGRESS;
+                if (progressEventHandler != null) {
+                    progressEventHandler(event);
+                }
+
+                // Increment progress bar
+                if (event.detail.progressPercent != undefined) {
+                    let progressPercent = event.detail.progressPercent / 100;
+                    progressWidth = progressBarWidth * progressPercent;
+                    let newProgress = progressBar.rect(progressWidth, progressBarHeight)
+                        .fill(gradient)
+                        .radius(progressCornerRadious);
+                    progress.replace(newProgress);
+                    newProgress.move(progress.x(), progress.y());
+                    progress = newProgress;
+                }
+
+                if (afterProgressEventHandler != null) {
+                    afterProgressEventHandler(event);
+                }
+
+                if (event.detail.progressPercent == 100) {
+                    progressBar.fire('barFilled', {nextState: previousState});
+                }
+
+                if (previousState == progressBarState.IDLE) {
+                    barMask.fire('mouseout');
+                } else if (previousState == progressBarState.IDLE_HOVER) {
+                    barMask.fire('mouseover');
+                }
+            }
+        });
+        progressBar.on('barFilled', event => {
+            if (currentState == progressBarState.PROGRESS) {
+                currentState = progressBarState.PROGRESS_COMPLETE;
+                progressBar.css('cursor', 'default');
+                if (progressCompleteEventHandler != null) {
+                    progressCompleteEventHandler(event);
+                }
+            }
+        });
+
+        return {
+            move: function(x, y) {
+                progressBar.move(x, y);
+            },
+
+            setWidth: function(newWidth) {
+                progressBarWidth = newWidth;
+                let newBar = progressBar.rect(progressBarWidth, progressBarHeight)
+                    .stroke({color: '#444444', width: 1})
+                    .fill('none');
+                bar.replace(newBar);
+                newBar.move(bar.x(), bar.y());
+                bar = newBar;
+            },
+
+            getProgress: function() {
+                return progressWidth / progressBarWidth * 100;
+            },
+
+            progress: function(percent) {
+                if (percent < 0 || percent > 100) {
+                    throw new RangeError("Percent must be between 0 and 100.");
+                }
+                progressBar.fire('increment', {progressPercent: percent})
+            },
+
+            onIdle: function(eventHandler) {
+                idleEventHandler = eventHandler;
+            },
+
+            onIdleHover: function(eventHandler) {
+                idleHoverEventHandler = eventHandler;
+            },
+
+            onProgress: function(eventHandler) {
+                progressEventHandler = eventHandler;
+            },
+
+            afterProgress: function(eventHandler) {
+                afterProgressEventHandler = eventHandler;
+            },
+
+            onProgressComplete: function(eventHandler) {
+                progressCompleteEventHandler = eventHandler;
+            },
+        }
+    }
     
-    return {Button, CheckBox, RadioButton, TextBox, ScrollBar}
+    return {Button, CheckBox, RadioButton, TextBox, ScrollBar, ProgressBar}
 
 }());
 

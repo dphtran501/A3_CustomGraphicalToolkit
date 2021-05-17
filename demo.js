@@ -106,3 +106,31 @@ scrollbar.onDragReady(e => {
 scrollbar.onDrag(e => {
 	console.log("DRAG: ", scrollbar.getThumbPosition());
 })
+
+// Implement a MyToolkit Progressbar
+var progressbar = new MyToolkit.ProgressBar();
+progressbar.move(380, 150);
+progressbar.setWidth(100);
+progressbar.onIdle(e => {
+	console.log("ProgressBar: IDLE")
+});
+progressbar.onIdleHover(e => {
+	console.log("ProgressBar: IDLE HOVER")
+});
+progressbar.onProgress(e => {
+	console.log("ProgressBar: PROGRESS " + progressbar.getProgress() + "\%")
+});
+progressbar.afterProgress(e => {
+	console.log("ProgressBar: AFTER PROGRESS " + progressbar.getProgress() + "\%")
+})
+progressbar.onProgressComplete(e => {
+	console.log("ProgressBar: PROGRESS COMPLETE")
+});
+let percent = 0;
+setInterval(() => {
+	if (percent > 100) {
+		percent = 0;
+	}
+	progressbar.progress(percent);
+	percent += 20;
+}, 1000);
