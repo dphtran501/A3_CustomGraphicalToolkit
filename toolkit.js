@@ -459,6 +459,7 @@ let MyToolkit = (function() {
                     previousSelectedButton.data('isSelected', false);
                     let previousSelectedButtonFilled = previousSelectedButton.get(0).get(1);
                     previousSelectedButtonFilled.opacity(0);
+                    radioButton.fire('deselect', {index: radioButtons.index(previousSelectedButton)});
                 }
 
                 idxSelectedButton = radioButtons.index(radioButton);
@@ -884,27 +885,31 @@ let MyToolkit = (function() {
         let progressCompleteEventHandler = null;
         let afterProgressEventHandler = null;
 
-        barMask.mouseover(event => {
-            if (currentState != progressBarState.IDLE_HOVER) {
-                currentState = progressBarState.IDLE_HOVER;
-                if (progressWidth != progressBarWidth) {
-                    progressBar.css('cursor', 'progress');
-                } else {
-                    progressBar.css('cursor', 'default');
+        function setBarMaskEventHandlers(mask) {
+            mask.mouseover(event => {
+                if (currentState != progressBarState.IDLE_HOVER) {
+                    currentState = progressBarState.IDLE_HOVER;
+                    if (progressWidth != progressBarWidth) {
+                        progressBar.css('cursor', 'progress');
+                    } else {
+                        progressBar.css('cursor', 'default');
+                    }
+                    if(idleHoverEventHandler != null) {
+                        idleHoverEventHandler(event);
+                    }
                 }
-                if(idleHoverEventHandler != null) {
-                    idleHoverEventHandler(event);
+            });
+            mask.mouseout(event => {
+                if (currentState != progressBarState.IDLE) {
+                    currentState = progressBarState.IDLE;
+                    if(idleEventHandler != null) {
+                        idleEventHandler(event);
+                    }
                 }
-            }
-        });
-        barMask.mouseout(event => {
-            if (currentState != progressBarState.IDLE) {
-                currentState = progressBarState.IDLE;
-                if(idleEventHandler != null) {
-                    idleEventHandler(event);
-                }
-            }
-        });
+            });
+        }
+        setBarMaskEventHandlers(barMask);
+
         progressBar.on('increment', event => {
             if (currentState != progressBarState.PROGRESS) {
                 let previousState = currentState;
@@ -963,6 +968,13 @@ let MyToolkit = (function() {
                 bar.replace(newBar);
                 newBar.move(bar.x(), bar.y());
                 bar = newBar;
+
+                let newBarMask = progressBar.rect(progressBarWidth, progressBarHeight)
+                    .opacity(0);
+                setBarMaskEventHandlers(newBarMask);
+                barMask.replace(newBarMask);
+                newBarMask.move(barMask.x(), barMask.y());
+                barMask = newBarMask;
             },
 
             getProgress: function() {
