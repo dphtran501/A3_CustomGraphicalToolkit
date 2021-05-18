@@ -54,6 +54,7 @@ btn.onExecute(e => {
 	console.log("Button: EXECUTE")
 });
 btn.onClick(function(e){
+	console.log("Clicked button")
 	if (playInterval == undefined) {
 		btn.text = "Loading...";
 		playProgressBar();
@@ -78,9 +79,11 @@ chkbox.onExecute(e => {
 	console.log("Checkbox: EXECUTE");
 });
 chkbox.onCheck(e => {
+	console.log("Checked checkbox")
 	chkbox.text = "UNCHECK me!";
 });
 chkbox.onUncheck(e => {
+	console.log("Unchecked checkbox")
 	chkbox.text = "CHECK me!";
 });
 
@@ -103,9 +106,11 @@ radioBtns.onExecute(e => {
 	console.log("RadioButton: EXECUTE")
 });
 radioBtns.onSelect((e, idx) => {
+	console.log("Selected RadioButton " + idx)
 	radioBtns.setText(idx, "I AM PICKED! :D");
 });
 radioBtns.onDeselect((e, idx) => {
+	console.log("Deselected RadioButton " + idx);
 	radioBtns.setText(idx, "Pick me please :(");
 });
 
