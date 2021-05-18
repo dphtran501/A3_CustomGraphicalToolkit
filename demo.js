@@ -148,3 +148,21 @@ scrollbar.onDragReady(e => {
 scrollbar.onDrag(e => {
 	console.log("ScrollBar: DRAG");
 })
+
+// Implement a MyToolkit Dial
+var dial = new MyToolkit.Dial();
+dial.move(400, 200);
+dial.setDegree(45);
+dial.setDegreeStep(22.5);
+dial.onIdle(e => {
+	console.log("Dial: IDLE");
+});
+dial.onIdleHover(e => {
+	console.log("Dial: IDLE HOVER");
+});
+dial.onTurn(e => {
+	console.log("Dial: TURN");
+});
+dial.afterTurn(e => {
+	console.log("Dial at " + dial.getDegree() + '\u00B0');
+})

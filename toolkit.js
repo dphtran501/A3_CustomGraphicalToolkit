@@ -1009,8 +1009,168 @@ let MyToolkit = (function() {
             },
         }
     }
+
+    let Dial = function() {
+        let dialRadius = 25;
+        let degree = 0;         // 0 = dial mark at top, 90 = dial mark at right, 180 = dial mark at bottom, etc.
+        let degreeStep = 15;    // clockwise turn
+
+        let gradient = draw.gradient('radial', add => {
+            add.stop(0, '#999999');
+            add.stop(1, '#666666');
+        });
+        let gradientDark = draw.gradient('radial', add => {
+            add.stop(0, '#777777');
+            add.stop(1, '#444444');
+        });
+
+        const dialState = {
+            "IDLE": 1,
+            "IDLE_HOVER": 2,
+            "TURN": 3
+        }
+        let currentState = dialState.IDLE;
+
+        // Construct progress bar
+        let dial = draw.group();
+        let dialKnob = dial.circle()
+            .radius(dialRadius)
+            .stroke({color: '#444444', width: 2})
+            .fill(gradient);
+
+        let dialMark = dial.line()
+            .plot(dialKnob.cx(), dialKnob.cy() - (dialRadius / 2), dialKnob.cx(), dialKnob.cy() - dialRadius)
+            .stroke({color: '#FFFFFF', width: 4});
+
+        let dialMask = dial.circle()
+            .radius(dialRadius)
+            .opacity(0);
+        dialMask.front();
+
+        // Dial event handling
+        let idleEventHandler = null;
+        let idleHoverEventHandler = null;
+        let turnEventHandler = null;
+        let afterTurnEventHandler = null;
+
+        dialMask.mouseover(event => {
+            if (currentState != dialState.IDLE_HOVER) {
+                currentState = dialState.IDLE_HOVER;
+                dialKnob.fill(gradientDark)
+                window.addEventListener('wheel', cancelScrolling, { passive: false });
+                if (idleHoverEventHandler != null) {
+                    idleHoverEventHandler(event);
+                }
+            }
+        });
+
+        dialMask.mouseout(event => {
+            if (currentState != dialState.IDLE) {
+                currentState = dialState.IDLE;
+                dialKnob.fill(gradient)
+                window.removeEventListener('wheel', cancelScrolling);
+                if (idleEventHandler != null) {
+                    idleEventHandler(event);
+                }
+            }
+        })
+
+        dialMask.on('wheel', event => {
+            if (currentState != dialState.TURN) {
+                currentState = dialState.TURN;
+                if (turnEventHandler != null) {
+                    turnEventHandler(event);
+                }
+                if (event.deltaY > 0) {
+                    // wheel down is clockwise turn; don't turn if degree = 360
+                    if (degree + degreeStep <= 360) {
+                        dial.rotate(degreeStep);
+                        degree += degreeStep;
+                    } else if (degree < 360) {
+                        dial.rotate(360 - degree);
+                        degree = 360;
+                    }
+                } else {
+                    // wheel up is counter-clockwise turn; don't turn if degree = 0
+                    if (degree - degreeStep >= 0) {
+                        dial.rotate(-degreeStep);
+                        degree -= degreeStep;
+                    } else if (degree > 0) {
+                        dial.rotate(-degree);
+                        degree = 0;
+                    }
+                }
+
+                setDialMarkColor();
+
+                if (afterTurnEventHandler != null) {
+                    afterTurnEventHandler(event);
+                }
+
+                dialMask.fire('mouseover');
+            }
+        })
+
+        // Prevent window scrolling when using mouse wheel
+        function cancelScrolling(event) {
+            event.preventDefault();
+        }
+
+        // Distinguish dial at 0 degrees from dial at 360 degrees
+        function setDialMarkColor() {
+            if (degree == 360) {
+                dialMark.stroke({color: '#000000', width: 4});
+            } else {
+                dialMark.stroke({color: '#FFFFFF', width: 4});
+            }
+        }
+
+        return {
+            move: function(x, y) {
+                dial.move(x, y);
+            },
+
+            getDegree: function() {
+                return degree;
+            },
+
+            setDegree: function(newDegree) {
+                if (newDegree < 0 || newDegree > 360) {
+                    throw new RangeError("Degree must be between 0 and 360 degrees.");
+                }
+
+                dial.rotate(newDegree - degree);
+                degree = newDegree;
+                setDialMarkColor();
+            },
+
+            setDegreeStep: function(step) {
+                if (step < 0 || step > 360) {
+                    throw new RangeError("Step must be between 0 and 360 degrees.");
+                }
+
+                degreeStep = step;
+            },
+
+            onIdle: function(eventHandler) {
+                idleEventHandler = eventHandler;
+            },
+
+            onIdleHover: function(eventHandler) {
+                idleHoverEventHandler = eventHandler;
+            },
+
+            onTurn: function(eventHandler) {
+                turnEventHandler = eventHandler;
+            },
+
+            afterTurn: function(eventHandler) {
+                afterTurnEventHandler = eventHandler;
+            }
+        }
+    }
     
-    return {Button, CheckBox, RadioButton, TextBox, ScrollBar, ProgressBar}
+    return {Button, CheckBox, RadioButton, TextBox, ScrollBar, ProgressBar, Dial}
 
 }());
 
