@@ -3,7 +3,8 @@ import {MyToolkit} from './toolkit.js';
 // Implement a MyToolkit Progressbar
 var progressbar = new MyToolkit.ProgressBar();
 progressbar.move(350, 100);
-progressbar.setWidth(300);
+progressbar.width = 300;
+progressbar.setProgress(66);
 progressbar.onIdle(e => {
 	console.log("ProgressBar: IDLE")
 });
@@ -14,11 +15,11 @@ progressbar.onProgress(e => {
 	console.log("ProgressBar: PROGRESS")
 });
 progressbar.afterProgress(e => {
-	console.log("Loading: " + progressbar.getProgress() + "\%")
+	console.log("Loading: " + progressbar.progress + "\%")
 })
 progressbar.onProgressComplete(e => {
 	console.log("ProgressBar: PROGRESS COMPLETE");
-	btn.setText("Play Progress Bar");
+	btn.text = "Play Progress Bar";
 });
 // Play Progress Bar
 let playInterval;
@@ -28,7 +29,7 @@ function playProgressBar() {
 		if (percent > 100) {
 			stopPlayInterval();
 		} else {
-			progressbar.progress(percent);
+			progressbar.progress = percent;
 			percent += 20;
 		}
 	}, 1000);
@@ -38,8 +39,7 @@ function stopPlayInterval() {
 }
 
 // Implement a MyToolkit Button
-var btn = new MyToolkit.Button;
-btn.setText("Play Progress Bar");
+var btn = new MyToolkit.Button("Play Progress Bar");
 btn.move(100,100);
 btn.onIdleUp(e => {
 	console.log("Button: IDLE UP");
@@ -55,7 +55,7 @@ btn.onExecute(e => {
 });
 btn.onClick(function(e){
 	if (playInterval == undefined) {
-		btn.setText("Loading...");
+		btn.text = "Loading...";
 		playProgressBar();
 	} else {
 		console.log("WAIT FOR PROGRESS BAR TO FINISH LOADING!");
@@ -63,8 +63,7 @@ btn.onClick(function(e){
 });
 
 // Implement a MyToolkit Checkbox
-var chkbox = new MyToolkit.CheckBox;
-chkbox.setText("CHECK me!");
+var chkbox = new MyToolkit.CheckBox("CHECK me!");
 chkbox.move(100, 200);
 chkbox.onIdle(e => {
 	console.log("Checkbox: IDLE");
@@ -79,10 +78,10 @@ chkbox.onExecute(e => {
 	console.log("Checkbox: EXECUTE");
 });
 chkbox.onCheck(e => {
-	chkbox.setText("UNCHECK me!");
+	chkbox.text = "UNCHECK me!";
 });
 chkbox.onUncheck(e => {
-	chkbox.setText("CHECK me!");
+	chkbox.text = "CHECK me!";
 });
 
 // Implement a MyToolkit RadioButton
@@ -126,15 +125,15 @@ textbox.onPrint(e => {
 	console.log("TextBox: PRINT");
 });
 textbox.onTextChange(e => {
-	console.log("Printed: ", textbox.getText());
+	console.log("Printed: ", textbox.text);
 });
 
 // Implement a MyToolkit Scrollbar
 var scrollbar = new MyToolkit.ScrollBar();
-scrollbar.setHeight(300);
+scrollbar.height = 300;
 scrollbar.move(350, 200);
 scrollbar.onMove((e, direction) => {
-	console.log("Going " + direction + "!", scrollbar.getThumbPosition());
+	console.log("Going " + direction + "!", scrollbar.thumbPosition);
 })
 scrollbar.onIdle(e => {
 	console.log("ScrollBar: IDLE");
@@ -152,8 +151,8 @@ scrollbar.onDrag(e => {
 // Implement a MyToolkit Dial
 var dial = new MyToolkit.Dial();
 dial.move(400, 200);
-dial.setDegree(45);
-dial.setDegreeStep(22.5);
+dial.degree = 45;
+dial.degreeStep = 22.5;
 dial.onIdle(e => {
 	console.log("Dial: IDLE");
 });
@@ -164,5 +163,5 @@ dial.onTurn(e => {
 	console.log("Dial: TURN");
 });
 dial.afterTurn(e => {
-	console.log("Dial at " + dial.getDegree() + '\u00B0');
+	console.log("Dial at " + dial.degree + '\u00B0');
 })
